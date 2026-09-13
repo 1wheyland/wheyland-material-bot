@@ -1,0 +1,35 @@
+{
+  "name": "wheyland-material-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.x" },
+  "packageManager": "pnpm@11.19.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "db:migrate": "tsx --env-file=.env.local scripts/migrate.ts"
+  },
+  "dependencies": {
+    "next": "16.3.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "openai": "7.15.0",
+    "pg": "^8.16.3",
+    "luxon": "^3.7.2",
+    "zod": "4.6.4"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.14",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.15.5",
+    "@types/luxon": "^3.7.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}
