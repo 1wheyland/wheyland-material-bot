@@ -74,6 +74,8 @@ Preview and create each fetch fresh Jobber sources; a preview is not a frozen sn
 
 ## Recovery guide
 
+**`OPENAI_QUOTA_EXCEEDED`**: check the OpenAI API project's available credits and spending limits. This is distinct from `OPENAI_RATE_LIMITED`, which is a temporary request limit. No automatic purchase or limit increase occurs. `OPENAI_KEY_INVALID` means the configured API key was rejected; `OPENAI_PERMISSION_DENIED` or `OPENAI_MODEL_UNAVAILABLE` means the key/project lacks the requested access. `OPENAI_REQUEST_REJECTED` requires checking the request/schema against the selected model. Error codes deliberately exclude raw provider messages and credentials.
+
 **`failed`** means failure occurred before the write intent. Correct the configuration, source size, or provider problem and rerun. Scheduled 5:50/5:55 calls provide limited retry coverage.
 
 **`processing`** has a five-minute lease. After expiry, a later run can take over; an old worker is fenced out of event creation. If the function budget is repeatedly exceeded, split collection/classification into a durable workflow before increasing production volume.

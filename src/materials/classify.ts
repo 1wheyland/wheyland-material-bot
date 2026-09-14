@@ -3,6 +3,7 @@ import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
 import { config } from '../config';
 import type { Source } from './sources';
+import { analysisErrorCode } from './errors';
 const evidence=z.object({sourceId:z.string(),excerpt:z.string()});
 export const MaterialSchema=z.object({
  name:z.string(),specification:z.string().nullable(),quantity:z.number().nullable(),unit:z.string().nullable(),
@@ -53,9 +54,11 @@ export async function classify(sources:Source[],signal:AbortSignal):Promise<Anal
   const c=config(),payload=JSON.stringify(sources);
   if(payload.length>c.MAX_SOURCE_CHARS) throw new Error('SOURCE_TOO_LARGE');
   const ai=new OpenAI({apiKey:c.OPENAI_API_KEY,maxRetries:2,timeout:60000});
+  try {
   const result=await ai.responses.parse({model:c.OPENAI_MODEL,store:false,
     input:[{role:'system',content:SYSTEM},{role:'user',content:payload}],
     text:{format:zodTextFormat(AnalysisSchema,'daily_materials')},max_output_tokens:12000},{signal});
   if(result.status!=='completed'||!result.output_parsed) throw new Error('AI_INCOMPLETE_OR_REFUSED');
   return validateAnalysis(AnalysisSchema.parse(result.output_parsed),sources);
+  } catch(error) { throw new Error(analysisErrorCode(error)); }
 }

@@ -10,18 +10,21 @@ import { dayWindow } from '../time';
 import rules from '../../config/standard-rules.json';
 import { RunStore } from './store';
 import { runDay } from './engine';
+import { log } from '../log';
 export function store() {return new RunStore(query,config().JOBBER_ACCOUNT_ID);}
 export async function collect(date:string,signal:AbortSignal):Promise<WorkGroup[]> {
  const window=dayWindow(date),gql=jobberClient(signal);
  const after=new Date(new Date(window.after).getTime()-1000).toISOString();
  const visits=(await dailyVisits(gql,after,window.before)).filter(v=>v.startAt&&Date.parse(v.startAt)>=Date.parse(window.after)&&Date.parse(v.startAt)<Date.parse(window.before));
  const groups=new Map<string,Visit[]>();
+ log('visits_loaded',{date,count:visits.length});
  for(const v of visits) { const key=v.job?.id??`visit:${v.id}`;groups.set(key,[...(groups.get(key)??[]),v]); }
  const result:WorkGroup[]=[];
  for(const [key,visits] of groups) {
   signal.throwIfAborted();
   const job=visits[0].job?await jobDetails(gql,key):null;
   const sources=sourcesFor(visits,job,rules);
+  log('material_analysis_started',{date,count:sources.length});
   const analysis=await classify(sources,signal);
   if(!job) analysis.warnings.push('Visit has no linked job; deeper material sources are unavailable.');
   result.push({key:job?`Job #${job.jobNumber}`:key,visits,analysis});
