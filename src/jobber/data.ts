@@ -8,7 +8,7 @@ const line = z.object({id:z.string(),name:nullableText,description:nullableText,
 const request = z.object({id:z.string(),title:nullableText,companyName:nullableText,contactName:nullableText,requestStatus:z.string(),lineItems:connection(line)});
 const jobBase = z.object({id:z.string(),jobNumber:z.number(),title:nullableText,instructions:nullableText,jobStatus:z.string()});
 const jobSchema = jobBase.extend({lineItems:connection(line),notes:connection(z.object({id:z.string().optional(),message:nullableText.optional()})),
- quote:z.object({id:z.string(),quoteNumber:z.number(),title:nullableText,message:nullableText,quoteStatus:z.string(),lineItems:connection(line),request:request.nullable()}).nullable(),request:request.nullable()});
+ quote:z.object({id:z.string(),quoteNumber:z.string(),title:nullableText,message:nullableText,quoteStatus:z.string(),lineItems:connection(line),request:request.nullable()}).nullable(),request:request.nullable()});
 const user = z.object({id:z.string(),name:z.object({full:z.string()})});
 const visitSchema = z.object({id:z.string(),title:nullableText,startAt:nullableText,endAt:nullableText,visitStatus:z.string(),instructions:nullableText,
  assignedUsers:connection(user),client:z.object({id:z.string(),companyName:nullableText}).nullable(),

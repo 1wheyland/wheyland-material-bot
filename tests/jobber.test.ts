@@ -15,7 +15,7 @@ test('Query B follows every nested connection independently',async()=>{
  const item={id:'l1',name:'GFCI',description:'20A GFCI',quantity:1};
  const request={id:'r',title:null,companyName:null,contactName:null,requestStatus:'NEW',lineItems:page([item],'more')};
  const job={id:'j',jobNumber:1,title:null,instructions:null,jobStatus:'active',lineItems:page([item],'more'),notes:page([{id:'n1',message:'buy GFCI'}],'more'),
-  quote:{id:'q',quoteNumber:1,title:null,message:null,quoteStatus:'APPROVED',lineItems:page([{...item,optional:false,recommended:false}],'more'),request},request};
+  quote:{id:'q',quoteNumber:'1',title:null,message:null,quoteStatus:'APPROVED',lineItems:page([{...item,optional:false,recommended:false}],'more'),request},request};
  let calls=0;
  const gql:GraphQL=async<T>(q:string)=>{
   calls++;if(q.includes('JobMaterialDetails'))return {job:structuredClone(job)} as T;
