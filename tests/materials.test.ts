@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateAnalysis,analyzeWithEvidenceRetry,type Material } from '../src/materials/classify';
+import { validateAnalysis,citationContract,analyzeWithEvidenceRetry,type Material } from '../src/materials/classify';
 import { aggregate,renderDetails as render,type WorkGroup } from '../src/materials/render';
 import { sourcesFor,type Source } from '../src/materials/sources';
 import type { Visit } from '../src/jobber/data';
@@ -73,4 +73,16 @@ test('explicit feet quantities survive validation but ratings and inches are not
   const m={...material(),specification:null,quantity:150,unit:'ft',evidence:[{sourceId:source.id,excerpt:text}]};
   assert.equal(validateAnalysis({materials:[m],warnings:[]},[{...source,text,quantity:null}]).materials[0].quantity,null);
  }
+});
+
+test('constrained citations attach original text and reject invented source IDs',()=>{
+ const contract=citationContract([source]);
+ assert.equal(contract.payload[0].id,'S1');
+ const generated={materials:[{...material(),evidence:[{sourceId:'S1'}]}],warnings:[]};
+ const result=contract.resolve(generated);
+ assert.deepEqual(result.materials[0].evidence,[{sourceId:source.id,excerpt:source.text}]);
+ assert.equal(result.materials[0].quantity,1);
+ assert.throws(()=>contract.resolve({materials:[{...material(),evidence:[{sourceId:'invented'}]}],warnings:[]}));
+ const falseQuote=contract.resolve({materials:[{...material(),evidence:[{sourceId:'S1',excerpt:'invented quotation'}]}],warnings:[]});
+ assert.equal(falseQuote.materials[0].evidence[0].excerpt,source.text);
 });
