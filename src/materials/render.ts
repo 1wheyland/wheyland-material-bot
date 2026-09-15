@@ -65,6 +65,14 @@ export function renderDetails(date:string,groups:WorkGroup[],marker:string) {
  return lines.join('\n');
 }
 
+export function jobDescription(group:WorkGroup[]) {
+ const descriptions=group.flatMap(g=>g.visits.map(v=>clean(v.instructions?.trim()||v.title?.trim()||v.job?.instructions?.trim()||v.job?.title?.trim()||'')));
+ const text=[...new Set(descriptions.filter(Boolean))].join(' · ');
+ if(!text)return 'See Jobber for work details.';
+ if(text.length<=200)return text;
+ const shortened=text.slice(0,197).replace(/\s+\S*$/,'');
+ return shortened+'…';
+}
 export function render(date:string,groups:WorkGroup[],marker:string,title='Materials') {
  const lines=[`${title} | ${date}`, '6:00 AM · Pacific', ''];
  if(!groups.length) lines.push('No jobs assigned.');
@@ -74,6 +82,7 @@ export function render(date:string,groups:WorkGroup[],marker:string,title='Mater
    const address=v.property?.address;
    lines.push(`${localTime(v.startAt)} · ${clean(v.client?.companyName||address?.street||'Jobber visit')}`);
   }
+  lines.push(`Work: ${jobDescription([g])}`);
   if(!g.analysis.materials.length) lines.push('  No materials confirmed.');
   for(const m of g.analysis.materials) lines.push(`  • ${item(m)}${m.classification==='VERIFY'?' — check':''}`);
   const checks=[...new Set([...g.analysis.warnings,...g.analysis.materials.flatMap(m=>m.uncertainties)])];

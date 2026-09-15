@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {groupByVan} from '../src/materials/vans';
-import {render,type WorkGroup} from '../src/materials/render';
+import {render,jobDescription,type WorkGroup} from '../src/materials/render';
 import {runVanDay,type VanDeps} from '../src/runs/vans';
 import {RunStore} from '../src/runs/store';
 import {VAN_SCHEMA} from '../src/runs/van-schema';
@@ -52,3 +52,16 @@ test('van migration is repeatable, legacy events block writes, and preview works
  }finally{await db.close();}
 });
 
+
+test('brief job descriptions use Jobber wording and stay above materials',()=>{
+ const g=group(['Tim Wheyland']);
+ g.visits[0].instructions='Install conduit on the roof and wire the bidet.';
+ const text=render('2026-09-14',[g],'');
+ assert.match(text,/Work: Install conduit on the roof and wire the bidet\./);
+ assert.ok(text.indexOf('Work:')<text.indexOf('150 ft'));
+ g.visits[0].instructions='Install conduit. '.repeat(30);
+ assert.ok(jobDescription([g]).length<=200);
+ assert.ok(jobDescription([g]).endsWith('…'));
+ g.visits[0].instructions=null;g.visits[0].title=null;
+ assert.equal(jobDescription([g]),'See Jobber for work details.');
+});
