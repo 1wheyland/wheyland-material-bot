@@ -28,19 +28,40 @@ export async function paginate<T>(fetchPage:(cursor:string|null)=>Promise<Connec
   }
   throw new Error('PAGINATION_LIMIT');
 }
-function checked<T>(schema:z.ZodType<T>,value:unknown):T {
-  const result=schema.safeParse(value); if(!result.success) throw new Error('JOBBER_SCHEMA_MISMATCH'); return result.data;
+const fieldLabels: Record<string,string> = {
+ visits:'VISITS',job:'JOB',quote:'QUOTE',request:'REQUEST',assignedUsers:'ASSIGNEES',
+ lineItems:'ITEMS',notes:'NOTES',client:'CLIENT',property:'PROPERTY',address:'ADDRESS',
+ id:'ID',name:'NAME',full:'FULL',description:'DESCRIPTION',quantity:'QUANTITY',
+ optional:'OPTIONAL',recommended:'RECOMMENDED',title:'TITLE',instructions:'INSTRUCTIONS',
+ jobNumber:'JOBNUMBER',quoteNumber:'QUOTENUMBER',jobStatus:'JOBSTATUS',quoteStatus:'QUOTESTATUS',
+ requestStatus:'REQUESTSTATUS',visitStatus:'VISITSTATUS',companyName:'COMPANY',contactName:'CONTACT',
+ startAt:'START',endAt:'END',street:'STREET',city:'CITY',province:'PROVINCE',postalCode:'POSTAL',
+ message:'MESSAGE',hasNextPage:'HASNEXT',endCursor:'CURSOR',
+};
+function checked<T>(schema:z.ZodType<T>,value:unknown,context:string[]=[]):T {
+  const result=schema.safeParse(value);
+  if(!result.success) {
+    const issue=result.error.issues[0];
+    // Only known schema labels and a type label leave this boundary; never data or Zod messages.
+    const labels=[...context,...issue.path].flatMap(key=>typeof key==='string'&&fieldLabels[key]?[fieldLabels[key]]:[]);
+    let invalid:unknown=value;
+    for(const key of issue.path) invalid=invalid!==null&&typeof invalid==='object'?(invalid as Record<PropertyKey,unknown>)[key]:undefined;
+    const kind=invalid===null?'NULL':Array.isArray(invalid)?'ARRAY':typeof invalid==='string'?'TEXT':typeof invalid==='number'?'NUMBER':typeof invalid==='boolean'?'BOOL':invalid===undefined?'MISSING':'OBJECT';
+    const location=labels.join('_').slice(-34)||'ROOT';
+    throw new Error(`JOBBER_SCHEMA_${location}_${kind}`);
+  }
+  return result.data;
 }
 export async function dailyVisits(gql:GraphQL,after:string,before:string) {
   const visits=await paginate(async cursor=> {
     const data=await gql<{visits:unknown}>(QUERY_A,{after,before,cursor});
-    return checked(connection(visitSchema),data.visits);
+    return checked(connection(visitSchema),data.visits,["visits"]);
   });
   for(const visit of visits) {
     visit.assignedUsers.nodes=await paginate(async cursor=>{
       const result=await gql<{visit:{assignedUsers:unknown}}>(`query VisitAssignees($id:EncodedId!,$cursor:String) {
        visit(id:$id) { assignedUsers(first:25,after:$cursor) { nodes { id name { full } } ${PAGE} } } }`,{id:visit.id,cursor});
-      return checked(connection(user),result.visit.assignedUsers);
+      return checked(connection(user),result.visit.assignedUsers,["assignedUsers"]);
     },visit.assignedUsers);
   }
   // Use an overlapping lower bound at the caller, then enforce the exact local half-open window.
@@ -48,7 +69,7 @@ export async function dailyVisits(gql:GraphQL,after:string,before:string) {
 }
 export async function jobDetails(gql:GraphQL,id:string):Promise<Job> {
   const result=await gql<{job:unknown}>(QUERY_B,{id});
-  const job=checked(jobSchema,result.job);
+  const job=checked(jobSchema,result.job,["job"]);
   async function complete<T>(path:string[],initial:Connection<T>,fields:string,schema:z.ZodType<T>) {
     initial.nodes=await paginate(async cursor=>{
       let selection=`${path.at(-1)}(first:25,after:$cursor) { nodes { ${fields} } ${PAGE} }`;
@@ -56,7 +77,7 @@ export async function jobDetails(gql:GraphQL,id:string):Promise<Job> {
       const data=await gql<{job:Record<string,unknown>}>(`query MoreJobSources($id:EncodedId!,$cursor:String) { job(id:$id) { ${selection} } }`,{id,cursor});
       let value:unknown=data.job;
       for(const key of path) value=(value as Record<string,unknown>|null)?.[key];
-      return checked(connection(schema),value);
+      return checked(connection(schema),value,["job",...path]);
     },initial);
   }
   await complete(['lineItems'],job.lineItems,LINE,line);
@@ -68,3 +89,4 @@ export async function jobDetails(gql:GraphQL,id:string):Promise<Job> {
   if(job.request) await complete(['request','lineItems'],job.request.lineItems,LINE,line);
   return job;
 }
+
