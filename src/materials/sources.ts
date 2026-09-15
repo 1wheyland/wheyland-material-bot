@@ -12,7 +12,7 @@ export function sourcesFor(visits:Visit[],job:Job|null,rules:string[]):Source[] 
     if(job.quote) {
       const q=job.quote;
       add(`quote:${q.id}:scope`,2,'quote scope',JSON.stringify({title:q.title,message:q.message,status:q.quoteStatus}));
-      for(const l of q.lineItems.nodes) add(`quote-line:${l.id}`,2,`quote line item; quote status ${q.quoteStatus}; recommended ${l.recommended}`, [l.name,l.description].filter(Boolean).join('\n'),l.quantity,l.optional===true);
+      for(const l of q.lineItems.nodes) add(`quote-line:${l.id}`,2,`quote line item; quote status ${q.quoteStatus}; recommended ${l.recommended ?? 'unknown'}`, [l.name,l.description].filter(Boolean).join('\n'),l.quantity,l.optional===true);
     }
     for(const n of job.notes.nodes) if(n.id) add(`note:${n.id}`,3,'job note',n.message);
     const requests=[job.request,job.quote?.request].filter((r):r is NonNullable<typeof r>=>!!r);
@@ -24,3 +24,4 @@ export function sourcesFor(visits:Visit[],job:Job|null,rules:string[]):Source[] 
   rules.forEach((r,i)=>add(`rule:${i}`,6,'Wheyland standard rule',r));
   return sources;
 }
+

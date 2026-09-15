@@ -4,7 +4,7 @@ import { LINE, PAGE, QUERY_A, QUERY_B } from './queries';
 const nullableText = z.string().nullable();
 const pageInfo = z.object({ hasNextPage:z.boolean(), endCursor:nullableText });
 const connection = <T extends z.ZodType>(node:T) => z.object({nodes:z.array(node),pageInfo});
-const line = z.object({id:z.string(),name:nullableText,description:nullableText,quantity:z.number().nullable(),optional:z.boolean().optional(),recommended:z.boolean().optional()});
+const line = z.object({id:z.string(),name:nullableText,description:nullableText,quantity:z.number().nullable(),optional:z.boolean().optional(),recommended:z.boolean().nullable().optional()});
 const request = z.object({id:z.string(),title:nullableText,companyName:nullableText,contactName:nullableText,requestStatus:z.string(),lineItems:connection(line)});
 const jobBase = z.object({id:z.string(),jobNumber:z.number(),title:nullableText,instructions:nullableText,jobStatus:z.string()});
 const jobSchema = jobBase.extend({lineItems:connection(line),notes:connection(z.object({id:z.string().optional(),message:nullableText.optional()})),
@@ -89,4 +89,5 @@ export async function jobDetails(gql:GraphQL,id:string):Promise<Job> {
   if(job.request) await complete(['request','lineItems'],job.request.lineItems,LINE,line);
   return job;
 }
+
 
