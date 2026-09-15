@@ -50,15 +50,26 @@ export function validateAnalysis(analysis:Analysis,sources:Source[]):Analysis {
   }
   return analysis;
 }
+export async function analyzeWithEvidenceRetry(sources:Source[],generate:(repair:boolean)=>Promise<Analysis>):Promise<Analysis> {
+  try { return validateAnalysis(await generate(false),sources); }
+  catch(error) {
+    if(!(error instanceof Error)||error.message!=='AI_INVALID_EVIDENCE') throw error;
+    return validateAnalysis(await generate(true),sources);
+  }
+}
 export async function classify(sources:Source[],signal:AbortSignal):Promise<Analysis> {
   const c=config(),payload=JSON.stringify(sources);
   if(payload.length>c.MAX_SOURCE_CHARS) throw new Error('SOURCE_TOO_LARGE');
   const ai=new OpenAI({apiKey:c.OPENAI_API_KEY,maxRetries:2,timeout:60000});
   try {
+  return await analyzeWithEvidenceRetry(sources,async repair=> {
+  signal.throwIfAborted();
   const result=await ai.responses.parse({model:c.OPENAI_MODEL,store:false,
-    input:[{role:'system',content:SYSTEM},{role:'user',content:payload}],
+    input:[{role:'system',content:SYSTEM+(repair?'\nA previous attempt failed citation validation. Copy each sourceId exactly from an input record id. Each excerpt must be a nonempty, continuous, character-for-character substring of that SAME record text field. Do not paraphrase, join passages, add ellipses, or quote quantity/kind metadata as text. Use short exact excerpts. If evidence cannot be supplied, omit that material and explain the omission in warnings.':'')},{role:'user',content:payload}],
     text:{format:zodTextFormat(AnalysisSchema,'daily_materials')},max_output_tokens:12000},{signal});
   if(result.status!=='completed'||!result.output_parsed) throw new Error('AI_INCOMPLETE_OR_REFUSED');
-  return validateAnalysis(AnalysisSchema.parse(result.output_parsed),sources);
+  return AnalysisSchema.parse(result.output_parsed);
+  });
   } catch(error) { throw new Error(analysisErrorCode(error)); }
 }
+

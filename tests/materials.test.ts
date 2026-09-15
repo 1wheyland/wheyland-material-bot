@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { validateAnalysis,type Material } from '../src/materials/classify';
+import { validateAnalysis,analyzeWithEvidenceRetry,type Material } from '../src/materials/classify';
 import { aggregate,render,type WorkGroup } from '../src/materials/render';
 import { sourcesFor,type Source } from '../src/materials/sources';
 import type { Visit } from '../src/jobber/data';
@@ -36,4 +36,30 @@ test('units and different specifications never combine; unknown quantities remai
 });
 test('empty custom rules do not invent Wheyland standards',()=>{
  assert.equal(sourcesFor([visit],null,[]).some(s=>s.priority===6),false);
+});
+
+test('invalid citations get one correction attempt and still require exact evidence',async()=>{
+ const attempts:boolean[]=[];
+ const result=await analyzeWithEvidenceRetry([source],async repair=>{
+  attempts.push(repair);const m=material();
+  if(!repair)m.evidence[0].excerpt='invented quotation';
+  return {materials:[m],warnings:[]};
+ });
+ assert.deepEqual(attempts,[false,true]);
+ assert.equal(result.materials[0].evidence[0].excerpt,source.text);
+ let calls=0;
+ await assert.rejects(analyzeWithEvidenceRetry([source],async()=>{
+  calls++;const m=material();m.evidence[0].sourceId='invented source';
+  return {materials:[m],warnings:[]};
+ }),/AI_INVALID_EVIDENCE/);
+ assert.equal(calls,2);
+});
+
+test('valid results and unrelated failures do not trigger correction calls',async()=>{
+ let calls=0;
+ await analyzeWithEvidenceRetry([source],async()=>{calls++;return {materials:[material()],warnings:[]};});
+ assert.equal(calls,1);
+ calls=0;
+ await assert.rejects(analyzeWithEvidenceRetry([source],async()=>{calls++;throw new Error('OPENAI_QUOTA_EXCEEDED');}),/OPENAI_QUOTA_EXCEEDED/);
+ assert.equal(calls,1);
 });
