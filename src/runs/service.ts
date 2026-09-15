@@ -1,3 +1,4 @@
+import { workDescription } from '../materials/description';
 import { config } from '../config';
 import { query } from '../db';
 import { jobberClient } from '../jobber/client';
@@ -33,7 +34,7 @@ export async function collect(date:string,signal:AbortSignal):Promise<WorkGroup[
   log('material_analysis_started',{date,count:sources.length});
   const analysis=await classify(sources,signal);
   if(!job) analysis.warnings.push('Visit has no linked job; deeper material sources are unavailable.');
-  result.push({key:job?`Job #${job.jobNumber}`:key,visits,analysis});
+  result.push({key:job?`Job #${job.jobNumber}`:key,visits,analysis,description:workDescription(job)});
  }
  return result;
 }
@@ -59,4 +60,5 @@ export async function reconcile(date:string,eventId:string,van?:VanKey) {
  await store(van).reconcile(date,eventId);
  return {status:'reconciled',date,eventId};
 }
+
 

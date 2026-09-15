@@ -2,7 +2,7 @@ import type { Visit } from '../jobber/data';
 import { DateTime } from 'luxon';
 import { ZONE } from '../time';
 import type { Analysis, Material } from './classify';
-export type WorkGroup={key:string;visits:Visit[];analysis:Analysis};
+export type WorkGroup={key:string;visits:Visit[];analysis:Analysis;description?:string};
 const clean=(s:string)=>s.replace(/[\u0000-\u001f\u007f]/g,' ').trim();
 const localTime=(value:string|null)=>{
  const time=value?DateTime.fromISO(value,{zone:ZONE}):null;
@@ -66,7 +66,7 @@ export function renderDetails(date:string,groups:WorkGroup[],marker:string) {
 }
 
 export function jobDescription(group:WorkGroup[]) {
- const descriptions=group.flatMap(g=>g.visits.map(v=>clean(v.instructions?.trim()||v.title?.trim()||v.job?.instructions?.trim()||v.job?.title?.trim()||'')));
+ const descriptions=group.flatMap(g=>g.description?.trim()?[clean(g.description)]:g.visits.map(v=>clean(v.instructions?.trim()||v.title?.trim()||v.job?.instructions?.trim()||v.job?.title?.trim()||'')));
  const text=[...new Set(descriptions.filter(Boolean))].join(' · ');
  if(!text)return 'See Jobber for work details.';
  if(text.length<=200)return text;
@@ -96,3 +96,4 @@ export function render(date:string,groups:WorkGroup[],marker:string,title='Mater
  if(marker)lines.push('',`Material Bot reference: ${marker}`);
  return lines.join('\n');
 }
+

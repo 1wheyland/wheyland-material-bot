@@ -100,3 +100,4 @@ When ENABLE_EVENT_WRITES=true, each weekday run creates two 6 AM Pacific events 
 
 For van reconciliation, include `"van":"tim"` or `"van":"niall"` alongside date and eventId in the existing reconciliation request. Omitting van continues to reconcile legacy daily events. Preview creates no events. Writing remains controlled by the existing environment flag; deploying this update does not enable it.
 
+Work descriptions prefer labor line-item descriptions, then introduction line-item descriptions or the quote introduction message; visit details remain the fallback. No additional AI call is used.
