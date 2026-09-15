@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateAnalysis,analyzeWithEvidenceRetry,type Material } from '../src/materials/classify';
-import { aggregate,render,type WorkGroup } from '../src/materials/render';
+import { aggregate,renderDetails as render,type WorkGroup } from '../src/materials/render';
 import { sourcesFor,type Source } from '../src/materials/sources';
 import type { Visit } from '../src/jobber/data';
 const source:Source={id:'line:1',priority:2,kind:'job line',text:'20A GFCI',quantity:1,optional:false};
@@ -62,4 +62,15 @@ test('valid results and unrelated failures do not trigger correction calls',asyn
  calls=0;
  await assert.rejects(analyzeWithEvidenceRetry([source],async()=>{calls++;throw new Error('OPENAI_QUOTA_EXCEEDED');}),/OPENAI_QUOTA_EXCEEDED/);
  assert.equal(calls,1);
+});
+
+test('explicit feet quantities survive validation but ratings and inches are not feet',()=>{
+ for(const text of ["Run 150' 3/4 inch EMT",'Run 150 ft of EMT','Run 150 feet of EMT']) {
+  const m={...material(),name:'EMT',specification:null,quantity:150,unit:'ft',evidence:[{sourceId:source.id,excerpt:text}]};
+  assert.equal(validateAnalysis({materials:[m],warnings:[]},[{...source,text,quantity:null}]).materials[0].quantity,150);
+ }
+ for(const text of ['150A panel','150 inch conduit','1150 feet conduit']) {
+  const m={...material(),specification:null,quantity:150,unit:'ft',evidence:[{sourceId:source.id,excerpt:text}]};
+  assert.equal(validateAnalysis({materials:[m],warnings:[]},[{...source,text,quantity:null}]).materials[0].quantity,null);
+ }
 });

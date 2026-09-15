@@ -91,3 +91,11 @@ Preview and create each fetch fresh Jobber sources; a preview is not a frozen sn
 **Database outage after a successful event write**: retain the database and restore connectivity. The committed `creating` row prevents re-creation; use reconciliation. Never restore a backup predating event creation and immediately resume writes without reconciling the calendar.
 
 Retain the date/event ledger indefinitely unless all corresponding Jobber dates are permanently excluded from reruns. Descriptions contain internal/customer information: restrict database access and define a company retention policy; old descriptions can be nulled after successful creation while retaining event/date identifiers. Rotate admin/cron credentials as appropriate. Session cookies stop validating after an admin secret change.
+
+## Van lists (September 2026)
+
+The preview shows Tim’s Van and Niall’s Van, with evidence and full checks collapsed under Show sources. Jobber assignee first names Tim (or Timothy) and Niall route jobs to those vans. Curren-only jobs appear in a separate preview section named Curren and are excluded from both calendar events. Other unmatched assignments appear under Needs van assignment. Shared Tim/Niall jobs appear on both vans with quantities unset so the crew can allocate them rather than double the total.
+
+When ENABLE_EVENT_WRITES=true, each weekday run creates two 6 AM Pacific events titled “Tim’s Van — Materials” and “Niall’s Van — Materials”. An empty van gets “No jobs assigned”. Each van has its own durable run state; one successful event is never repeated because the other failed. Uncertain writes still require reconciliation. The authenticated status/run paths automatically apply an additive van_daily_runs table migration; existing daily_runs history is preserved. Existing legacy processing/creating/uncertain/created dates block new van events until reviewed.
+
+For van reconciliation, include `"van":"tim"` or `"van":"niall"` alongside date and eventId in the existing reconciliation request. Omitting van continues to reconcile legacy daily events. Preview creates no events. Writing remains controlled by the existing environment flag; deploying this update does not enable it.

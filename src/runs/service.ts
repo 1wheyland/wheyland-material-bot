@@ -9,9 +9,15 @@ import type { WorkGroup } from '../materials/render';
 import { dayWindow } from '../time';
 import rules from '../../config/standard-rules.json';
 import { RunStore } from './store';
-import { runDay } from './engine';
+import { runVanDay } from './vans';
+import { VANS,type VanKey } from '../materials/vans';
+import { VAN_SCHEMA } from './van-schema';
 import { log } from '../log';
-export function store() {return new RunStore(query,config().JOBBER_ACCOUNT_ID);}
+let schemaReady:Promise<unknown>|undefined;
+export function ensureVanSchema() {
+ return schemaReady??=query(VAN_SCHEMA).catch(error=>{schemaReady=undefined;throw error;});
+}
+export function store(van?:VanKey) {return new RunStore(query,config().JOBBER_ACCOUNT_ID,van);}
 export async function collect(date:string,signal:AbortSignal):Promise<WorkGroup[]> {
  const window=dayWindow(date),gql=jobberClient(signal);
  const after=new Date(new Date(window.after).getTime()-1000).toISOString();
@@ -31,23 +37,26 @@ export async function collect(date:string,signal:AbortSignal):Promise<WorkGroup[
  }
  return result;
 }
-export function run(date:string,dryRun:boolean) {
+export async function run(date:string,dryRun:boolean) {
+ await ensureVanSchema();
  const c=config();
- return runDay(date,dryRun,{store:store(),collect,writesEnabled:c.ENABLE_EVENT_WRITES==='true',maxDescription:c.MAX_EVENT_DESCRIPTION_CHARS,
-  async create(description,window,signal) {
+ return runVanDay(date,dryRun,{store,legacy:store(),collect,writesEnabled:c.ENABLE_EVENT_WRITES==='true',maxDescription:c.MAX_EVENT_DESCRIPTION_CHARS,
+  async create(van,description,window,signal) {
    const data=await jobberClient(signal)<{eventCreate:{event:{id:string}|null;userErrors:{message:string}[]}}>(EVENT_CREATE,
-    {input:{title:'MATERIALS FOR THE DAY',description,startAt:window.eventStart,endAt:window.eventEnd,allDay:false}},true);
+    {input:{title:VANS.find(v=>v.key===van)!.title,description,startAt:window.eventStart,endAt:window.eventEnd,allDay:false}},true);
    if(!data.eventCreate?.event?.id||data.eventCreate.userErrors?.length) throw new Error('EVENT_OUTCOME_UNCERTAIN');
    return data.eventCreate.event.id;
   }
  });
 }
-export async function reconcile(date:string,eventId:string) {
- const row=await store().get(date);
+export async function reconcile(date:string,eventId:string,van?:VanKey) {
+ await ensureVanSchema();
+ const row=await store(van).get(date);
  if(!row||!['creating','uncertain'].includes(row.state)) throw new Error('RECONCILE_STATE_INVALID');
  const data=await jobberClient(AbortSignal.timeout(30000))<{event:{id:string;title:string;description:string;startAt:string}}>(EVENT_READ,{id:eventId});
  const e=data.event;
- if(!e||e.title!=='MATERIALS FOR THE DAY'||Date.parse(e.startAt)!==Date.parse(dayWindow(date).eventStart)||!e.description.includes(`Material Bot reference: ${date}/${row.run_id}`)) throw new Error('RECONCILE_EVENT_MISMATCH');
- await store().reconcile(date,eventId);
+ if(!e||e.title!==(van?VANS.find(v=>v.key===van)!.title:'MATERIALS FOR THE DAY')||Date.parse(e.startAt)!==Date.parse(dayWindow(date).eventStart)||!e.description.includes(`Material Bot reference: ${date}/${row.run_id}`)) throw new Error('RECONCILE_EVENT_MISMATCH');
+ await store(van).reconcile(date,eventId);
  return {status:'reconciled',date,eventId};
 }
+

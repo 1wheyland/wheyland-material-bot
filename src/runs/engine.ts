@@ -6,7 +6,7 @@ import { render } from '../materials/render';
 import { errorCode, log } from '../log';
 export type RunDeps={store:RunStore;collect:(date:string,signal:AbortSignal)=>Promise<WorkGroup[]>;
  create:(description:string,window:ReturnType<typeof dayWindow>,signal:AbortSignal)=>Promise<string>;
- writesEnabled:boolean;maxDescription:number};
+ title?:string;writesEnabled:boolean;maxDescription:number};
 export async function runDay(date:string,dryRun:boolean,deps:RunDeps) {
  const window=dayWindow(date);
  if(!window.weekday) return {status:'skipped_weekend'};
@@ -17,7 +17,7 @@ export async function runDay(date:string,dryRun:boolean,deps:RunDeps) {
  try {
   const groups=await deps.collect(date,signal);
   signal.throwIfAborted();
-  const description=render(date,groups,`${date}/${runId}`);
+  const description=render(date,groups,`${date}/${runId}`,deps.title);
   if(description.length>deps.maxDescription) throw new Error('EVENT_DESCRIPTION_TOO_LONG');
   if(dryRun) return {status:'preview',date,description,jobCount:groups.length};
   await deps.store.preparingWrite(date,runId,description);
@@ -33,3 +33,4 @@ export async function runDay(date:string,dryRun:boolean,deps:RunDeps) {
   throw new Error(code);
  }
 }
+

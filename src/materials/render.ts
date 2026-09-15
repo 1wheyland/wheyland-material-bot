@@ -21,7 +21,7 @@ export function aggregate(groups:WorkGroup[]) {
  }
  return [...totals.values()];
 }
-export function render(date:string,groups:WorkGroup[],marker:string) {
+export function renderDetails(date:string,groups:WorkGroup[],marker:string) {
  const lines=[`WHEYLAND ELECTRIC | ${date}`, '6:00 AM • America/Los_Angeles',
   'Jobber is the source of truth. ? means verify. Shared crew materials are counted once in totals.', ''];
  const employees=new Map<string,{name:string;groups:WorkGroup[]}>();
@@ -62,5 +62,28 @@ export function render(date:string,groups:WorkGroup[],marker:string) {
   for(const r of rows) lines.push(`  ${item({...r.material,quantity:r.quantity})} [${r.material.classification}] — ${[...r.groups].map(clean).join(', ')}`);
  }
  lines.push('',`Material Bot reference: ${marker}`);
+ return lines.join('\n');
+}
+
+export function render(date:string,groups:WorkGroup[],marker:string,title='Materials') {
+ const lines=[`${title} | ${date}`, '6:00 AM · Pacific', ''];
+ if(!groups.length) lines.push('No jobs assigned.');
+ for(const g of groups) {
+  lines.push(g.key);
+  for(const v of g.visits) {
+   const address=v.property?.address;
+   lines.push(`${localTime(v.startAt)} · ${clean(v.client?.companyName||address?.street||'Jobber visit')}`);
+  }
+  if(!g.analysis.materials.length) lines.push('  No materials confirmed.');
+  for(const m of g.analysis.materials) lines.push(`  • ${item(m)}${m.classification==='VERIFY'?' — check':''}`);
+  const checks=[...new Set([...g.analysis.warnings,...g.analysis.materials.flatMap(m=>m.uncertainties)])];
+  if(checks.length) lines.push('  Needs checking:',...checks.slice(0,3).map(x=>`    • ${clean(x)}`),...(checks.length>3?['    • More checks in Show sources.']:[]));
+  lines.push('');
+ }
+ const buying=aggregate(groups).filter(r=>['NEED TO BUY','CED'].includes(r.material.procurement));
+ lines.push('BUYING LIST');
+ lines.push(...(buying.length?buying.map(r=>`• ${item({...r.material,quantity:r.quantity})}${r.material.procurement==='CED'?' · CED':''}`):['No purchases confirmed.']));
+ if(groups.some(g=>g.analysis.materials.some(m=>m.procurement==='VERIFY')))lines.push('Check stock and supplier before buying.');
+ if(marker)lines.push('',`Material Bot reference: ${marker}`);
  return lines.join('\n');
 }

@@ -1,3 +1,4 @@
+import { supportsLength } from './quantities';
 import OpenAI from 'openai';
 import { zodTextFormat } from 'openai/helpers/zod';
 import { z } from 'zod';
@@ -36,7 +37,7 @@ export function validateAnalysis(analysis:Analysis,sources:Source[]):Analysis {
     if(!refs.length) { m.specification=null;m.quantity=null;m.unit=null;m.procurement='VERIFY'; }
     // Ratings such as 20A must never be mistaken for a count of 20.
     const countText=m.quantity===null?'':String(m.quantity).replace('.','\\.');
-    if(m.quantity!==null && !refs.some(s=>s.quantity===m.quantity ||
+    if(m.quantity!==null && !refs.some(s=>s.quantity===m.quantity || supportsLength(m.quantity!,m.unit,s.text) ||
       new RegExp(`\\b(?:qty|quantity|count)\\s*[:=]?\\s*${countText}(?![\\d.\\w])|\\b${countText}\\s*(?:×|x\\b|each\\b|pieces\\b|units\\b)`,'i').test(s.text))) {
       m.quantity=null;m.classification='VERIFY';m.uncertainties.push('Quantity is not supported by the cited source.');
     }
@@ -72,4 +73,5 @@ export async function classify(sources:Source[],signal:AbortSignal):Promise<Anal
   });
   } catch(error) { throw new Error(analysisErrorCode(error)); }
 }
+
 
