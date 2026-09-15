@@ -7,12 +7,15 @@ import {RunStore} from '../src/runs/store';
 import {VAN_SCHEMA} from '../src/runs/van-schema';
 import {database} from './helpers';
 const group=(names:string[]):WorkGroup=>({key:'Job #44',visits:[{id:'v',title:'Long scope',startAt:'2026-09-14T15:00:00Z',endAt:null,visitStatus:'TODAY',instructions:null,client:null,property:null,job:null,assignedUsers:{nodes:names.map(name=>({id:name,name:{full:name}})),pageInfo:{hasNextPage:false,endCursor:null}}}],analysis:{materials:[{name:'EMT',specification:'3/4 inch',quantity:150,unit:'ft',classification:'REQUIRED',procurement:'NEED TO BUY',evidence:[{sourceId:'private-id',excerpt:'source quote'}],reason:'verbose reasoning',uncertainties:[]}],warnings:[]}});
-test('vans absorb floating Curren; solo Curren stays separate; shared jobs do not double quantities',()=>{
+test('vans absorb floating Curren; solo Curren stays separate; shared jobs retain full quantities on both vans',()=>{
  const groups=groupByVan([group(['Tim Wheyland','Curren Provost']),group(['Niall Smith']),group(['Curren Provost'])]);
  assert.equal(groups.tim.length,1);assert.equal(groups.niall.length,1);assert.equal(groups.curren.length,1);
  const shared=groupByVan([group(['Tim Wheyland','Niall Smith'])]);
- assert.equal(shared.tim[0].analysis.materials[0].quantity,null);
- assert.equal(shared.niall[0].analysis.materials[0].quantity,null);
+ assert.equal(shared.tim[0].analysis.materials[0].quantity,150);
+ assert.equal(shared.niall[0].analysis.materials[0].quantity,150);
+ assert.equal(shared.tim[0].analysis.materials[0].classification,'REQUIRED');
+ assert.deepEqual(shared.tim[0].analysis.materials,shared.niall[0].analysis.materials);
+ assert.match(render('2026-09-14',shared.tim,''),/job total/);
  const text=render('2026-09-14',groups.tim,'',"Tim’s Van");
  assert.match(text,/150 ft/);assert.ok(!text.includes('private-id'));assert.ok(!text.includes('verbose reasoning'));
 });
@@ -48,3 +51,4 @@ test('van migration is repeatable, legacy events block writes, and preview works
   await assert.rejects(runVanDay('2026-09-14',false,deps),/LEGACY_DAILY_EVENT_REVIEW_REQUIRED/);
  }finally{await db.close();}
 });
+

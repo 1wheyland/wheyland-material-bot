@@ -8,11 +8,13 @@ export function groupByVan(groups:WorkGroup[]) {
   const vans=VANS.filter(v=>names.includes(v.key)||v.key==='tim'&&names.includes('timothy'));
   if(vans.length===1) result[vans[0].key].push(group);
   else if(vans.length===2) {
-   // Show the shared scope on both vans without promising the full quantity to each.
+   // Both vans receive the same job quantities; the note identifies a shared set.
    for(const van of vans) result[van.key].push({...group,analysis:{...group.analysis,
-    materials:group.analysis.materials.map(m=>({...m,quantity:null,classification:'VERIFY',uncertainties:[...m.uncertainties,'Shared job: confirm which van carries this material.']})),
-    warnings:[...group.analysis.warnings,'Shared with the other van; quantities are not duplicated.']}});
+
+    warnings:[...group.analysis.warnings,'Shared job — same material list on both vans. Quantities are for the job total.']}});
   } else result[names.includes('curren')?'curren':'unassigned'].push(group);
  }
  return result;
 }
+
+
