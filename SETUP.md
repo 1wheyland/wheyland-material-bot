@@ -101,3 +101,4 @@ When ENABLE_EVENT_WRITES=true, each weekday run creates two 6 AM Pacific events 
 For van reconciliation, include `"van":"tim"` or `"van":"niall"` alongside date and eventId in the existing reconciliation request. Omitting van continues to reconcile legacy daily events. Preview creates no events. Writing remains controlled by the existing environment flag; deploying this update does not enable it.
 
 Work descriptions prefer labor line-item descriptions, then introduction line-item descriptions or the quote introduction message; visit details remain the fallback. No additional AI call is used.
+October 2026: Paul Cavender replaces Tim/Timothy for the former Tim van. New lists use Paul as the van driver. Match the full Jobber name, ignoring case and extra whitespace. Preserve the internal tim key and historical event ledger. Tim-only jobs now need van assignment.

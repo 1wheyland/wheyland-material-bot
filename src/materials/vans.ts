@@ -1,11 +1,13 @@
 import type { WorkGroup } from './render';
-export const VANS = [{key:'tim',name:"Tim’s Van",title:"Tim’s Van — Materials"},{key:'niall',name:"Niall’s Van",title:"Niall’s Van — Materials"}] as const;
+// Keep the original van key so its event ledger survives the driver change.
+export const VANS = [{key:'tim',name:"Paul’s Van",title:"Paul’s Van — Materials"},{key:'niall',name:"Niall’s Van",title:"Niall’s Van — Materials"}] as const;
 export type VanKey = typeof VANS[number]['key'];
 export function groupByVan(groups:WorkGroup[]) {
  const result:Record<VanKey|'curren'|'unassigned',WorkGroup[]>={tim:[],niall:[],curren:[],unassigned:[]};
  for(const group of groups) {
-  const names=group.visits.flatMap(v=>v.assignedUsers.nodes.map(u=>u.name.full.trim().split(/\s+/)[0].toLowerCase()));
-  const vans=VANS.filter(v=>names.includes(v.key)||v.key==='tim'&&names.includes('timothy'));
+  const fullNames=group.visits.flatMap(v=>v.assignedUsers.nodes.map(u=>u.name.full.trim().replace(/\s+/g,' ').toLowerCase()));
+  const names=fullNames.map(name=>name.split(' ')[0]);
+  const vans=VANS.filter(v=>v.key==='tim'?fullNames.includes('paul cavender'):names.includes(v.key));
   if(vans.length===1) result[vans[0].key].push(group);
   else if(vans.length===2) {
    // Both vans receive the same job quantities; the note identifies a shared set.

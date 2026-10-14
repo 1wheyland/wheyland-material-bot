@@ -56,7 +56,8 @@ export async function reconcile(date:string,eventId:string,van?:VanKey) {
  if(!row||!['creating','uncertain'].includes(row.state)) throw new Error('RECONCILE_STATE_INVALID');
  const data=await jobberClient(AbortSignal.timeout(30000))<{event:{id:string;title:string;description:string;startAt:string}}>(EVENT_READ,{id:eventId});
  const e=data.event;
- if(!e||e.title!==(van?VANS.find(v=>v.key===van)!.title:'MATERIALS FOR THE DAY')||Date.parse(e.startAt)!==Date.parse(dayWindow(date).eventStart)||!e.description.includes(`Material Bot reference: ${date}/${row.run_id}`)) throw new Error('RECONCILE_EVENT_MISMATCH');
+ const titles=van?[VANS.find(v=>v.key===van)!.title,...(van==='tim'?["Tim’s Van — Materials"]:[])]:['MATERIALS FOR THE DAY'];
+ if(!e||!titles.includes(e.title)||Date.parse(e.startAt)!==Date.parse(dayWindow(date).eventStart)||!e.description.includes(`Material Bot reference: ${date}/${row.run_id}`)) throw new Error('RECONCILE_EVENT_MISMATCH');
  await store(van).reconcile(date,eventId);
  return {status:'reconciled',date,eventId};
 }

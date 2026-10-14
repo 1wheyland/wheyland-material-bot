@@ -1,16 +1,23 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {groupByVan} from '../src/materials/vans';
+import {groupByVan,VANS} from '../src/materials/vans';
 import {render,jobDescription,type WorkGroup} from '../src/materials/render';
 import {runVanDay,type VanDeps} from '../src/runs/vans';
 import {RunStore} from '../src/runs/store';
 import {VAN_SCHEMA} from '../src/runs/van-schema';
 import {database} from './helpers';
 const group=(names:string[]):WorkGroup=>({key:'Job #44',visits:[{id:'v',title:'Long scope',startAt:'2026-09-14T15:00:00Z',endAt:null,visitStatus:'TODAY',instructions:null,client:null,property:null,job:null,assignedUsers:{nodes:names.map(name=>({id:name,name:{full:name}})),pageInfo:{hasNextPage:false,endCursor:null}}}],analysis:{materials:[{name:'EMT',specification:'3/4 inch',quantity:150,unit:'ft',classification:'REQUIRED',procurement:'NEED TO BUY',evidence:[{sourceId:'private-id',excerpt:'source quote'}],reason:'verbose reasoning',uncertainties:[]}],warnings:[]}});
+test('Paul replaces Tim without matching another Paul or changing the durable van key',()=>{
+ const groups=groupByVan([group(['  PAUL   CAVENDER  ']),group(['Tim Wheyland']),group(['Timothy Wheyland']),group(['Paul Smith'])]);
+ assert.equal(groups.tim.length,1);
+ assert.equal(groups.unassigned.length,3);
+ assert.equal(VANS[0].key,'tim');
+ assert.equal(VANS[0].title,"Paul’s Van — Materials");
+});
 test('vans absorb floating Curren; solo Curren stays separate; shared jobs retain full quantities on both vans',()=>{
- const groups=groupByVan([group(['Tim Wheyland','Curren Provost']),group(['Niall Smith']),group(['Curren Provost'])]);
+ const groups=groupByVan([group(['Paul Cavender','Curren Provost']),group(['Niall Smith']),group(['Curren Provost'])]);
  assert.equal(groups.tim.length,1);assert.equal(groups.niall.length,1);assert.equal(groups.curren.length,1);
- const shared=groupByVan([group(['Tim Wheyland','Niall Smith'])]);
+ const shared=groupByVan([group(['Paul Cavender','Niall Smith'])]);
  assert.equal(shared.tim[0].analysis.materials[0].quantity,150);
  assert.equal(shared.niall[0].analysis.materials[0].quantity,150);
  assert.equal(shared.tim[0].analysis.materials[0].classification,'REQUIRED');
@@ -24,7 +31,7 @@ test('two van events are independently durable across concurrency, failure and r
   await db.exec(VAN_SCHEMA);
   const counts={tim:0,niall:0};let fail=true;
   const deps:VanDeps={legacy:new RunStore(query,'a'),store:v=>new RunStore(query,'a',v),writesEnabled:true,maxDescription:20000,
-   collect:async()=>[group(['Tim Wheyland']),group(['Niall Smith'])],
+   collect:async()=>[group(['Paul Cavender']),group(['Niall Smith'])],
    create:async(v)=>{counts[v]++;if(v==='niall'&&fail)throw new Error('EVENT_OUTCOME_UNCERTAIN');return v+'-event';}};
   await Promise.all([runVanDay('2026-09-14',false,deps),runVanDay('2026-09-14',false,deps)]);
   assert.deepEqual(counts,{tim:1,niall:1});
@@ -54,7 +61,7 @@ test('van migration is repeatable, legacy events block writes, and preview works
 
 
 test('brief job descriptions use Jobber wording and stay above materials',()=>{
- const g=group(['Tim Wheyland']);
+ const g=group(['Paul Cavender']);
  g.visits[0].instructions='Install conduit on the roof and wire the bidet.';
  const text=render('2026-09-14',[g],'');
  assert.match(text,/Work: Install conduit on the roof and wire the bidet\./);
@@ -65,3 +72,4 @@ test('brief job descriptions use Jobber wording and stay above materials',()=>{
  g.visits[0].instructions=null;g.visits[0].title=null;
  assert.equal(jobDescription([g]),'See Jobber for work details.');
 });
+
